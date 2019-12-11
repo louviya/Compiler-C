@@ -72,12 +72,14 @@ static int aaa_top = -1;
        caller_offset - where non-double formal params are stored
                        (in caller's frame)
        loc_var_offset - offsets of local vars
+
    They are all initialized in b_func_prologue() and updated in
    b_store_formal_params(), except return_val_offset,
    which is initialized in b_alloc_return_value() and never updated.
    loc_var_offset is also updated as local variables are allocated.
    Outside of a function declaration, loc_var_offset is set to a
    positive value, which is guaranteed to be illegal.
+
    In Pascal, procedure/function definitions can be nested, so the user
    must be careful not to call b_func_prologue for a proc/func until
    all local procs/funcs have been processed.
@@ -254,8 +256,10 @@ void b_jump (char *label)
    TYSIGNEDINT, B_ZERO, and ".L1" generates code that pops an 
    integer off the stack and checks the value.  If it is zero it
    jumps to ".L1", otherwise it does not jump.
+
    Note:  The function "new_symbol" is the source of new labels.
           Every time you call new_symbol you get a new label.
+
    Note:  See function b_dispatch for a different type of
           conditional jump.  */
 
@@ -334,8 +338,10 @@ void b_cond_jump (TYPETAG type, B_COND cond, char *label)
    stack with 45.  If v > 45, then no jump is executed and v is left on
    the stack.  If v <= 45, then v is popped off the stack and a jump to
    ".L1" occurs.
+
    Note:  The function "new_symbol" is the source of new labels.
           Every time you call new_symbol you get a new label. 
+
    Note:  See function b_cond_jump for a different type
           of conditional jump.  */
 
@@ -870,6 +876,7 @@ void b_negate (TYPETAG type)
    variable back on the stack.  The value pushed is that of the variable
    either before or after the inc/dec, depending on which operator
    was used.
+
    The size parameter is ignored unless type is TYPTR, in which case
    size should be the size (in bytes) of a datum pointed to by a
    pointer of this type. */
@@ -965,6 +972,7 @@ void b_inc_dec (TYPETAG type, B_INC_DEC_OP idop, unsigned int size)
 
 /* b_arith_rel_op accepts a binary arithmetic or relational operator
    and a type.  The operators are:
+
         B_ADD       add (+)
 	B_SUB       substract (-) 
 	B_MULT      multiply (*)
@@ -981,14 +989,17 @@ void b_inc_dec (TYPETAG type, B_INC_DEC_OP idop, unsigned int size)
    stack.  It pops those values off the stack, performs the 
    indicated operation, and pushes the resulting value onto
    the stack.
+
    No arithmetic on pointers is allowed in this function,
    although pointer comparisons are okay.  For pointer arithmetic,
    use b_ptr_arith_op.
+
    NOTE:  For arithmetic operators that are not commutative, it
           assumes that the operands were pushed onto the stack
 	  in left-to-right order (e.g. if the expression is
 	  x - y, y is at the top of the stack and x is the 
 	  next item below it.
+
    NOTE:  For relational operators, a value of either 1 (true)
           or 0 (false) is pushed onto the stack.         */
 
@@ -1132,9 +1143,11 @@ void b_arith_rel_op (B_ARITH_REL_OP arop, TYPETAG type)
    The second argument is on top of the stack.  b_ptr_arith_op pops the
    two arguments off the stack, performs the given pointer arithmetic
    operation, and pushes the result back on the stack.
+
    Only legal operations are performed, e.g., adding two pointers is not
    allowed.  The resulting value is a pointer, unless two pointers are
    subtracted, in which case the result is an integer.
+
    Note: this function does not handle pointer comparisons.  That is
    done in b_arith_rel_op. */
 
@@ -1297,19 +1310,26 @@ void b_init_formal_param_offset ()
    offset (from the frame pointer) at which this
    parameter should be stored.  (For the curious, base_offset and
    double_base_offset get initialized in b_func_prologue.)
+
    For example, if your function has 3 parameters (int, int, double)
    this function would be called as follows:
+
        offset = b_store_formal_param (TYSIGNEDINT);
        offset = b_store_formal_param (TYSIGNEDINT);
        offset = b_store_formal_param (TYDOUBLE);
+
    Note that a call to b_store_formal_param must be made for each formal
    parameter in left-to-right order on the parameter list.
+
    All necessary type conversions are performed on the argument values,
    so, for example, calling
+
        offset = b_store_formal_param (TYFLOAT);
        offset = b_store_formal_param (TYSIGNEDCHAR);
+
    will automatically convert the first argument from double to float,
    and the second argument from int to char.
+
    Var parameters (reference parameters) in Pascal should always be stored
    using TYPTR, regardless of their actual type.
 */
@@ -1412,6 +1432,7 @@ int b_get_formal_param_offset (TYPETAG type)
    value for the current function.  This is only required for Pascal
    functions, where the return value can be set/updated any number of
    times and must persist across proc/func calls.
+
    Allocates 8 bytes and sets the global return_value_offset to the
    allocated space.
 */
@@ -1493,6 +1514,7 @@ int b_get_local_var_offset()
    (if necessary) to quadword (8-byte) alignment.  The size value passed
    in must match the size passed to b_alloc_local_vars() at the beginning
    of the function.
+
    Note: This function is currently not needed, because we just leave
    the function no matter where the stack pointer is at the time.
    */
@@ -1575,6 +1597,7 @@ void b_func_epilogue (char *f_name)
    The return_type argument is the return type of the function.
    b_set_return assumes that the type of the value currently on the stack
    is the same as return_type, and this value is popped after it is copied.
+
    This is only needed for Pascal functions, which can assign and update
    a return value anywhere, any number of times.
 */
@@ -1627,6 +1650,7 @@ void b_set_return (TYPETAG return_type)
    value to be returned is at %ebp + return_value_offset, and that its type
    is the same as return_type.  It loads this return value into the
    proper return register.
+
    This function should be called once for each function body, right before
    calling b_func_epilogue(), which does the actual return.
 */
@@ -1681,6 +1705,7 @@ void b_prepare_return (TYPETAG return_type)
    there is no return expression, TYVOID should be passed as the
    argument.  Assumes the value to be returned is on top of the stack,
    and that its type is the same as return_type.
+
    This function is not needed for compiling standard Pascal.
 */
 
@@ -1733,6 +1758,7 @@ void b_encode_return (TYPETAG return_type)
    and updated in b_load_arg).  A word is 4 bytes.  The latter value is
    used to pop the stack when the function returns.  This is done in
    b_funcall_by_name or b_funcall_by_ptr.
+
    NOTE: you must call b_alloc_arglist for each function call, even if
    no actual arguments are passed.  Also, every call to b_alloc_arglist
    must be followed (as in matching parentheses) by a call to either
@@ -1807,33 +1833,47 @@ void b_alloc_arglist (int total_size)
    and assumes that a value of this type is on top of the stack.
    It determines where in the argument list to put the argument:
    whether the argument should be in a register or on the stack.
+
    If the argument should be in a register, it emits code to move 
    the value of that argument (assumed to be at the top of the
    stack and of the proper type) from the stack to the proper 
    register.
+
    If the argument should be in the stack portion of the argument list,
    it emits code to move the value of that argument (assumed to be at the
    top of the stack and of the proper type) from the stack to another
    location in the stack (which has already been allocated by
    b_alloc_arglist) that will be the proper offset from the new
    frame pointer when control is transferred to the function.
+
    The word-offset of the argument is initialized in b_alloc_arglist,
    and is increased with each call to b_load_arg.
+
    For example, if your function is named "foo" with return type float
    and 3 actual parameters (int, double, double) this function would be
    called as follows:
+
        b_alloc_arglist(20);	// 20 bytes total - higher values are ok
+
        [here, put code to push the value of arg1 onto the stack]
+
        b_load_arg (TYSIGNEDINT);
+
        [here, put code to push the value of arg2 onto the stack]
+
        b_load_arg (TYDOUBLE);
+
        [here, put code to push the value of arg3 onto the stack]
+
        b_load_arg (TYDOUBLE);
+
        b_funcall_by_name ("foo", TYFLOAT);
+
    WARNING: it is assumed that the argument list lies direcly underneath the
    current top value on the stack.  Therefore, the sequence above must be
    followed strictly: b_load_arg is called after each push of an argument
    value, before the next argument is pushed.
+
    Note also that b_load_arg does NOT leave the value of the argument on
    the stack, i.e., the value is popped.    */
 
@@ -1888,11 +1928,13 @@ void b_load_arg (TYPETAG type)
    the arguments, and pops this value off of the actual_arg_space
    stack.  If the return type is TYVOID, then nothing is pushed on the
    stack upon return.
+
    Both b_funcall_by_name and b_funcall_by_ptr should only be used in
    conjunction with the routines b_alloc_arglist and b_load_args.
    Each call to b_funcall_by_name or b_funcall_by_ptr must be preceded
    (as with matching parentheses) by a call to b_alloc_arglist, with
    zero or more calls to b_load_args in between.
+
    b_funcall_by_name and b_funcall_by_ptr differ in only one way: the
    former requires an explicit function name as argument, while the
    latter assumes the entry address of the function has been pushed
@@ -1926,11 +1968,13 @@ void b_funcall_by_name (char *f_name, TYPETAG return_type)
    this value off of the actual_arg_space stack.  The entry address of
    the function gets popped in the process.  If the return type
    is TYVOID, then nothing is pushed on the stack upon return.
+
    Both b_funcall_by_name and b_funcall_by_ptr should only be used in
    conjunction with the routines b_alloc_arglist and b_load_args.
    Each call to b_funcall_by_name or b_funcall_by_ptr must be preceded
    (as with matching parentheses) by a call to b_alloc_arglist, with
    zero or more calls to b_load_args in between.
+
    b_funcall_by_name and b_funcall_by_ptr differ in only one way: the
    former requires an explicit function name as argument, while the
    latter assumes the entry address of the function has been pushed
@@ -1964,12 +2008,16 @@ void b_funcall_by_ptr (TYPETAG return_type)
    (e.g. an int) is accomplished by a call to b_globl_decl followed
    by a call to the appropriate b_alloc function (b_alloc_int in the
    case of an int).
+
    For example, to emit code for the global declaration ``int i=5;'',
    one might call
+
    b_global_decl("i", 4);
    b_alloc_int(5, 1);
+
    For another example, to emit code for the global declaration
    ``int a[10] = {3,4,5};'', one might call
+
    b_global_decl("a", 4);
    b_alloc_int(3, 1);
    b_alloc_int(4, 1);
@@ -2030,6 +2078,7 @@ void b_global_func_decl (char *func_name)
    initialization for the variable.  b_global_decl should be called
    once beforehand for the variable name (see header comments for this
    function).
+
    To allocate a pointer (and initialize it to 0), pass "0" (the string
    constant) as the first argument to b_alloc_ptr().
 */
@@ -2451,3 +2500,4 @@ void my_print_typetag (TYPETAG tag)
 		}
 
     }
+
